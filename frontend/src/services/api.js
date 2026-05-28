@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // todas las llamadas van a /api que Vite redirige al backend en 8080
-const api = axios.create({ baseURL: '' });
+const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || '' });
 
 // agrega el token JWT automáticamente en cada request
 api.interceptors.request.use((config) => {

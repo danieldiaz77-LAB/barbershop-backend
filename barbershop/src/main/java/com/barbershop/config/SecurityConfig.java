@@ -66,6 +66,8 @@ public class SecurityConfig {
         CorsConfiguration cors = new CorsConfiguration();
         cors.setAllowedOriginPatterns(List.of(
                 frontendUrl,
+                "https://barbershop-frontend-steel.vercel.app",
+                "https://*.vercel.app",
                 "http://localhost:3000",
                 "http://localhost:5173"
         ));
