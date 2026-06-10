@@ -3,14 +3,15 @@ package com.barbershop.service;
 import com.barbershop.model.Appointment;
 import com.barbershop.model.Barber;
 import com.barbershop.model.User;
-import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
 import java.math.BigDecimal;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -38,10 +39,10 @@ public class EmailService {
     private static final String DIM     = "#5a6055";
     private static final String GHOST   = "#3a3f35";
 
-    private final JavaMailSender mailSender;
+    private final HttpClient httpClient = HttpClient.newHttpClient();
 
-    @Value("${spring.mail.username}")
-    private String fromEmail;
+    @Value("${resend.api.key}")
+    private String resendApiKey;
 
     @Value("${app.business.name:ElPipeBarber}")
     private String businessName;
@@ -52,9 +53,7 @@ public class EmailService {
     @Value("${app.business.phone:+56 9 9809 8449}")
     private String businessPhone;
 
-    public EmailService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
-    }
+    private static final String FROM = "ElPipeBarber <onboarding@resend.dev>";
 
     // ── Emails públicos ──────────────────────────────────────────────────────
 
@@ -171,35 +170,20 @@ public class EmailService {
                 "<table width='100%' cellpadding='0' cellspacing='0' style='background:" + BLACK + ";padding:28px 12px;'>" +
                 "<tr><td align='center'>" +
                 "<table width='600' cellpadding='0' cellspacing='0' style='max-width:600px;width:100%;'>" +
-
-                // Tab tipo arriba derecha
                 "<tr><td align='right' style='padding-bottom:6px;'>" +
                 "</td></tr>" +
-
-                // Barra neon top
                 "<tr><td style='height:3px;background:" + NEON + ";font-size:0;'>&nbsp;</td></tr>" +
-
-                // Header logo
                 "<tr>" + logoBox + "</tr>" +
-
-                // Linea degradada neon
                 "<tr><td style='height:1px;font-size:0;background:linear-gradient(90deg," + NEON + " 0%," + NEON + " 35%,transparent 100%);'>&nbsp;</td></tr>" +
-
-                // Body con watermark FLOW
                 "<tr><td style='background:" + BODY_BG + ";padding:28px 28px 24px;border-left:1px solid " + LINE + ";border-right:1px solid " + LINE + ";position:relative;'>" +
                 "<div style='position:relative;'>" +
                 body +
                 "</div>" +
                 "</td></tr>" +
-
-                // Footer
                 "<tr><td style='background:" + SURFACE + ";padding:14px 28px;border-left:1px solid " + LINE + ";border-right:1px solid " + LINE + ";border-top:1px solid " + LINE + ";font-size:11px;color:" + GHOST + ";'>" +
                 "Mensaje automatico de <strong style='color:" + DIM + ";'>" + safe(businessName) + "</strong>. No responder este correo." +
                 "</td></tr>" +
-
-                // Barra neon bottom
                 "<tr><td style='height:3px;background:" + NEON + ";font-size:0;'>&nbsp;</td></tr>" +
-
                 "</table></td></tr></table></body></html>";
     }
 
@@ -336,16 +320,39 @@ public class EmailService {
         return HtmlUtils.htmlEscape(value == null ? "" : value);
     }
 
+    private String jsonEscape(String value) {
+        if (value == null) return "";
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
+    }
+
     private void enviar(String destino, String asunto, String htmlCuerpo) {
         try {
-            MimeMessage     mensaje = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mensaje, true, "UTF-8");
-            helper.setFrom(fromEmail);
-            helper.setTo(destino);
-            helper.setSubject(asunto);
-            helper.setText(htmlCuerpo, true);
-            mailSender.send(mensaje);
-            System.out.println("[EmailService] Email enviado a " + destino);
+            String json = "{" +
+                    "\"from\":\"" + jsonEscape(FROM) + "\"," +
+                    "\"to\":[\"" + jsonEscape(destino) + "\"]," +
+                    "\"subject\":\"" + jsonEscape(asunto) + "\"," +
+                    "\"html\":\"" + jsonEscape(htmlCuerpo) + "\"" +
+                    "}";
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.resend.com/emails"))
+                    .header("Authorization", "Bearer " + resendApiKey)
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(json))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200 || response.statusCode() == 201) {
+                System.out.println("[EmailService] Email enviado a " + destino);
+            } else {
+                System.err.println("[EmailService] Error Resend " + response.statusCode() + " enviando a " + destino + ": " + response.body());
+            }
         } catch (Exception e) {
             System.err.println("[EmailService] Error enviando a " + destino + ": " + e.getMessage());
         }
