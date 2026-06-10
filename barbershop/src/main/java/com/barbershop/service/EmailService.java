@@ -41,8 +41,11 @@ public class EmailService {
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
-    @Value("${resend.api.key}")
-    private String resendApiKey;
+    @Value("${brevo.api.key}")
+    private String brevoApiKey;
+
+    @Value("${app.mail.from:danielorlandodiaz14@gmail.com}")
+    private String fromEmail;
 
     @Value("${app.business.name:ElPipeBarber}")
     private String businessName;
@@ -52,8 +55,6 @@ public class EmailService {
 
     @Value("${app.business.phone:+56 9 9809 8449}")
     private String businessPhone;
-
-    private static final String FROM = "ElPipeBarber <onboarding@resend.dev>";
 
     // ── Emails públicos ──────────────────────────────────────────────────────
 
@@ -333,15 +334,15 @@ public class EmailService {
     private void enviar(String destino, String asunto, String htmlCuerpo) {
         try {
             String json = "{" +
-                    "\"from\":\"" + jsonEscape(FROM) + "\"," +
-                    "\"to\":[\"" + jsonEscape(destino) + "\"]," +
+                    "\"sender\":{\"name\":\"" + jsonEscape(businessName) + "\",\"email\":\"" + jsonEscape(fromEmail) + "\"}," +
+                    "\"to\":[{\"email\":\"" + jsonEscape(destino) + "\"}]," +
                     "\"subject\":\"" + jsonEscape(asunto) + "\"," +
-                    "\"html\":\"" + jsonEscape(htmlCuerpo) + "\"" +
+                    "\"htmlContent\":\"" + jsonEscape(htmlCuerpo) + "\"" +
                     "}";
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api.resend.com/emails"))
-                    .header("Authorization", "Bearer " + resendApiKey)
+                    .uri(URI.create("https://api.brevo.com/v3/smtp/email"))
+                    .header("api-key", brevoApiKey)
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(json))
                     .build();
@@ -351,7 +352,7 @@ public class EmailService {
             if (response.statusCode() == 200 || response.statusCode() == 201) {
                 System.out.println("[EmailService] Email enviado a " + destino);
             } else {
-                System.err.println("[EmailService] Error Resend " + response.statusCode() + " enviando a " + destino + ": " + response.body());
+                System.err.println("[EmailService] Error Brevo " + response.statusCode() + " enviando a " + destino + ": " + response.body());
             }
         } catch (Exception e) {
             System.err.println("[EmailService] Error enviando a " + destino + ": " + e.getMessage());
