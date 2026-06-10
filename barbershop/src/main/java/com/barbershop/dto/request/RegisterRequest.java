@@ -1,6 +1,5 @@
 package com.barbershop.dto.request;
 
-import com.barbershop.model.enums.Role;
 import jakarta.validation.constraints.*;
 
 public record RegisterRequest(
@@ -14,8 +13,7 @@ public record RegisterRequest(
         @NotBlank @Size(min = 6, message = "Mínimo 6 caracteres")
         String password,
 
-        String phone,
-
-        // si no se envía, se asigna CLIENT por defecto
-        Role role
+        // Teléfono opcional al crear barbero desde el panel admin
+        // Cuando viene del registro público se valida el patrón chileno
+        String phone
 ) {}

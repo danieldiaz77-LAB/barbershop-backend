@@ -8,7 +8,6 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "appointments", indexes = {
-        // índice para buscar citas por barbero y hora rápido
         @Index(name = "idx_appt_barber_start", columnList = "barber_id, startTime")
 })
 @Getter @Setter
@@ -20,17 +19,14 @@ public class Appointment {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    // cliente que agenda
     @ManyToOne(optional = false)
     @JoinColumn(name = "client_id")
     private User client;
 
-    // barbero asignado
     @ManyToOne(optional = false)
     @JoinColumn(name = "barber_id")
     private Barber barber;
 
-    // servicio seleccionado
     @ManyToOne(optional = false)
     @JoinColumn(name = "service_id")
     private Service service;
@@ -44,6 +40,10 @@ public class Appointment {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AppointmentStatus status;
+
+    // notas adicionales del cliente (opcional)
+    @Column(columnDefinition = "TEXT")
+    private String notes;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

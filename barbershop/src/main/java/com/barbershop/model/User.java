@@ -29,7 +29,16 @@ public class User {
 
     private String phone;
 
-    // rol: CLIENT o BARBER_ADMIN
+    @Builder.Default
+    @Column(columnDefinition = "boolean default false")
+    private boolean emailVerified = false;
+
+    @Column(unique = true)
+    private String emailVerificationToken;
+
+    private LocalDateTime emailVerificationTokenExpiresAt;
+
+    // rol: CLIENT, BARBER o BARBER_ADMIN
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;

@@ -19,6 +19,7 @@ public record AppointmentResponse(
         LocalDateTime startTime,
         LocalDateTime endTime,
         AppointmentStatus status,
+        String notes,
         LocalDateTime createdAt
 ) {
     public static AppointmentResponse from(Appointment a) {
@@ -35,6 +36,7 @@ public record AppointmentResponse(
                 a.getStartTime(),
                 a.getEndTime(),
                 a.getStatus(),
+                a.getNotes(),
                 a.getCreatedAt()
         );
     }

@@ -26,19 +26,28 @@ public class AuthController {
 
     @Operation(summary = "Registrar nuevo usuario")
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(
-            @Valid @RequestBody RegisterRequest req) {
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest req) {
         return ResponseEntity.ok(authService.register(req));
     }
 
-    @Operation(summary = "Login — retorna JWT")
+    @Operation(summary = "Login - retorna JWT")
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(
-            @Valid @RequestBody LoginRequest req) {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest req) {
         return ResponseEntity.ok(authService.login(req));
     }
 
-    // retorna info del usuario autenticado según el token
+    @Operation(summary = "Verificar email de cliente")
+    @GetMapping("/verify-email")
+    public ResponseEntity<Map<String, String>> verifyEmail(@RequestParam String token) {
+        return ResponseEntity.ok(authService.verifyEmail(token));
+    }
+
+    @Operation(summary = "Reenviar email de verificacion")
+    @PostMapping("/resend-verification")
+    public ResponseEntity<Map<String, String>> resendVerification(@RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(authService.resendVerification(body.get("email")));
+    }
+
     @Operation(summary = "Info del usuario autenticado")
     @GetMapping("/me")
     public ResponseEntity<Map<String, Object>> me(Authentication auth) {

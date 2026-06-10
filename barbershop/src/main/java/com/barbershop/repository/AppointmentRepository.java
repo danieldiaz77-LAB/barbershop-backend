@@ -3,6 +3,7 @@ package com.barbershop.repository;
 import com.barbershop.model.Appointment;
 import com.barbershop.model.Barber;
 import com.barbershop.model.User;
+import com.barbershop.model.enums.AppointmentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -34,4 +35,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
 
     // todas las citas de un barbero
     List<Appointment> findByBarberOrderByStartTimeDesc(Barber barber);
+
+    long countByClientAndStatusNotAndStartTimeAfter(
+            User client, AppointmentStatus status, LocalDateTime startTime);
+
+    long countByClientAndStatusNotAndStartTimeBetween(
+            User client, AppointmentStatus status, LocalDateTime from, LocalDateTime to);
 }

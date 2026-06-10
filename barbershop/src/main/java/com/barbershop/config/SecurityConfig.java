@@ -29,7 +29,6 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final UserDetailsService userDetailsService;
 
-    // URL del frontend para configurar CORS
     @Value("${app.frontend.url}")
     private String frontendUrl;
 
@@ -39,13 +38,11 @@ public class SecurityConfig {
         this.userDetailsService = userDetailsService;
     }
 
-    // encriptación de contraseñas con BCrypt
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // proveedor de autenticación que usa nuestra BD
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
@@ -53,14 +50,12 @@ public class SecurityConfig {
         return provider;
     }
 
-    // expone el AuthenticationManager para usarlo en AuthService
     @Bean
     public AuthenticationManager authenticationManager(
             AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
-    // configuración de CORS para permitir el frontend
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cors = new CorsConfiguration();
@@ -84,11 +79,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // habilita CORS con nuestra configuración
                 .cors(c -> c.configurationSource(corsConfigurationSource()))
-                // deshabilitamos CSRF porque usamos JWT (stateless)
                 .csrf(csrf -> csrf.disable())
-                // sin sesiones en servidor, cada request se autentica con JWT
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
 
@@ -98,31 +90,35 @@ public class SecurityConfig {
                         .requestMatchers("/api/health").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/barbers/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/services/**").permitAll()
-                        .requestMatchers("/api/webhook/stripe").permitAll()
 
-                        // Swagger UI público
+                        // availability público
+                        .requestMatchers(HttpMethod.GET, "/api/appointments/availability").permitAll()
+
+                        // Swagger público
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**"
                         ).permitAll()
 
-                        // solo BARBER_ADMIN puede crear/editar/eliminar barberos y servicios
-                        .requestMatchers(HttpMethod.POST, "/api/barbers/**").hasRole("BARBER_ADMIN")
-                        .requestMatchers(HttpMethod.PUT,  "/api/barbers/**").hasRole("BARBER_ADMIN")
+                        // solo BARBER_ADMIN
+                        .requestMatchers(HttpMethod.POST,   "/api/barbers/**").hasRole("BARBER_ADMIN")
+                        .requestMatchers(HttpMethod.PUT,    "/api/barbers/**").hasRole("BARBER_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/barbers/**").hasRole("BARBER_ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/services/**").hasRole("BARBER_ADMIN")
-                        .requestMatchers(HttpMethod.PUT,  "/api/services/**").hasRole("BARBER_ADMIN")
+                        .requestMatchers(HttpMethod.POST,   "/api/services/**").hasRole("BARBER_ADMIN")
+                        .requestMatchers(HttpMethod.PUT,    "/api/services/**").hasRole("BARBER_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/services/**").hasRole("BARBER_ADMIN")
-
-                        // rutas de admin
                         .requestMatchers("/api/admin/**").hasRole("BARBER_ADMIN")
+                        .requestMatchers("/api/users/**").hasRole("BARBER_ADMIN")
 
-                        // cualquier otra ruta requiere autenticación
+                        // BARBER: puede ver citas y marcar completadas
+                        .requestMatchers(HttpMethod.GET,  "/api/appointments/barber/**").hasAnyRole("BARBER_ADMIN", "BARBER")
+                        .requestMatchers(HttpMethod.POST, "/api/appointments/*/complete").hasAnyRole("BARBER_ADMIN", "BARBER")
+
+                        // cualquier otra requiere autenticación
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
-                // agrega el filtro JWT antes del filtro de autenticación estándar
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

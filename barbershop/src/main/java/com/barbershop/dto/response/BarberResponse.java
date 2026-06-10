@@ -10,14 +10,16 @@ public record BarberResponse(
         String photoUrl,
         String bio,
         String workStart,
-        String workEnd
+        String workEnd,
+        UUID userId
 ) {
     // convierte entidad a DTO en un solo lugar
     public static BarberResponse from(Barber b) {
         return new BarberResponse(
                 b.getId(), b.getName(), b.getSpecialty(),
                 b.getPhotoUrl(), b.getBio(),
-                b.getWorkStart(), b.getWorkEnd()
+                b.getWorkStart(), b.getWorkEnd(),
+                b.getUser() != null ? b.getUser().getId() : null
         );
     }
 }

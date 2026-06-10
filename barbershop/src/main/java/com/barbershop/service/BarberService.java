@@ -4,7 +4,9 @@ import com.barbershop.dto.request.BarberRequest;
 import com.barbershop.dto.response.BarberResponse;
 import com.barbershop.exception.NotFoundException;
 import com.barbershop.model.Barber;
+import com.barbershop.model.User;
 import com.barbershop.repository.BarberRepository;
+import com.barbershop.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,9 +16,12 @@ import java.util.UUID;
 public class BarberService {
 
     private final BarberRepository barberRepository;
+    private final UserRepository userRepository;
 
-    public BarberService(BarberRepository barberRepository) {
+    public BarberService(BarberRepository barberRepository,
+                         UserRepository userRepository) {
         this.barberRepository = barberRepository;
+        this.userRepository = userRepository;
     }
 
     public List<BarberResponse> listAll() {
@@ -30,7 +35,6 @@ public class BarberService {
         return BarberResponse.from(findById(id));
     }
 
-    // método interno reutilizable que retorna la entidad
     public Barber findById(UUID id) {
         return barberRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Barbero no encontrado: " + id));
@@ -45,6 +49,14 @@ public class BarberService {
                 .workStart(req.workStart())
                 .workEnd(req.workEnd())
                 .build();
+
+        // Vincular usuario si viene el userId
+        if (req.userId() != null) {
+            User user = userRepository.findById(req.userId())
+                    .orElseThrow(() -> new NotFoundException("Usuario no encontrado: " + req.userId()));
+            barber.setUser(user);
+        }
+
         return BarberResponse.from(barberRepository.save(barber));
     }
 
@@ -56,6 +68,14 @@ public class BarberService {
         barber.setBio(req.bio());
         barber.setWorkStart(req.workStart());
         barber.setWorkEnd(req.workEnd());
+
+        // Actualizar vínculo de usuario si viene
+        if (req.userId() != null) {
+            User user = userRepository.findById(req.userId())
+                    .orElseThrow(() -> new NotFoundException("Usuario no encontrado: " + req.userId()));
+            barber.setUser(user);
+        }
+
         return BarberResponse.from(barberRepository.save(barber));
     }
 

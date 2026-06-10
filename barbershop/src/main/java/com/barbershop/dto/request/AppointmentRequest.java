@@ -14,5 +14,8 @@ public record AppointmentRequest(
 
         // fecha y hora de inicio de la cita
         @NotNull(message = "La hora de inicio es obligatoria")
-        LocalDateTime startTime
+        LocalDateTime startTime,
+
+        // notas adicionales del cliente (opcional)
+        String notes
 ) {}

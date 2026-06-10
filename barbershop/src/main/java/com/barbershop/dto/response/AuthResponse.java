@@ -8,5 +8,6 @@ public record AuthResponse(
         UUID userId,
         String email,
         String fullName,
-        Role role
+        Role role,
+        boolean emailVerified
 ) {}

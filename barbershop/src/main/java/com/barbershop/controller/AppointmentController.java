@@ -69,6 +69,13 @@ public class AppointmentController {
         return appointmentService.cancel(id, auth.getName());
     }
 
+    // admin o barber marca cita como completada
+    @Operation(summary = "Marcar cita como completada — Admin o Barber")
+    @PostMapping("/{id}/complete")
+    public AppointmentResponse complete(@PathVariable UUID id) {
+        return appointmentService.markCompleted(id);
+    }
+
     @Operation(summary = "Obtener cita por ID")
     @GetMapping("/{id}")
     public AppointmentResponse getById(@PathVariable UUID id) {
