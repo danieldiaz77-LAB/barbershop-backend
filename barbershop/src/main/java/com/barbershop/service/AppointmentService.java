@@ -78,7 +78,7 @@ public class AppointmentService {
         }
 
         LocalDateTime endTime = req.startTime().plusMinutes(service.getDurationMinutes());
-        validateWorkingHours(req.startTime(), endTime);
+        validateWorkingHours(req.startTime(), endTime, barber);
 
         List<Appointment> overlaps = appointmentRepository.findOverlapping(barber, req.startTime(), endTime);
         if (!overlaps.isEmpty()) {
@@ -108,9 +108,12 @@ public class AppointmentService {
 
         if (date.getDayOfWeek() == DayOfWeek.SUNDAY) return List.of();
 
+        LocalTime barberStart = parseTimeOrDefault(barber.getWorkStart(), businessStart(date));
+        LocalTime barberEnd   = parseTimeOrDefault(barber.getWorkEnd(), CLOSE);
+
         List<LocalDateTime> slots    = new ArrayList<>();
-        LocalDateTime       cursor   = LocalDateTime.of(date, businessStart(date));
-        LocalDateTime       closeAt  = LocalDateTime.of(date, CLOSE);
+        LocalDateTime       cursor   = LocalDateTime.of(date, barberStart);
+        LocalDateTime       closeAt  = LocalDateTime.of(date, barberEnd);
 
         while (!cursor.plusMinutes(service.getDurationMinutes()).isAfter(closeAt)) {
             LocalDateTime slotEnd     = cursor.plusMinutes(service.getDurationMinutes());
@@ -178,17 +181,18 @@ public class AppointmentService {
                 .orElseThrow(() -> new NotFoundException("Cita no encontrada"));
     }
 
-    private void validateWorkingHours(LocalDateTime start, LocalDateTime end) {
+    private void validateWorkingHours(LocalDateTime start, LocalDateTime end, Barber barber) {
         if (start.getDayOfWeek() == DayOfWeek.SUNDAY) {
             throw new BadRequestException("El local esta cerrado los domingos");
         }
         if (!start.toLocalDate().equals(end.toLocalDate())) {
             throw new BadRequestException("La cita debe terminar el mismo dia");
         }
-        LocalTime workStart = businessStart(start.toLocalDate());
-        if (start.toLocalTime().isBefore(workStart) || end.toLocalTime().isAfter(CLOSE)) {
+        LocalTime workStart = parseTimeOrDefault(barber.getWorkStart(), businessStart(start.toLocalDate()));
+        LocalTime workEnd   = parseTimeOrDefault(barber.getWorkEnd(), CLOSE);
+        if (start.toLocalTime().isBefore(workStart) || end.toLocalTime().isAfter(workEnd)) {
             throw new BadRequestException(
-                    "Horario fuera del rango de atencion (" + workStart + " - " + CLOSE + ")");
+                    "Horario fuera del rango de atencion del barbero (" + workStart + " - " + workEnd + ")");
         }
         if (isWeekday(start.toLocalDate()) && overlapsLunch(start.toLocalTime(), end.toLocalTime())) {
             throw new BadRequestException("Horario no disponible por almuerzo (16:00 - 17:00)");
@@ -225,5 +229,14 @@ public class AppointmentService {
 
     private boolean overlapsLunch(LocalTime start, LocalTime end) {
         return start.isBefore(LUNCH_END) && end.isAfter(LUNCH_START);
+    }
+
+    private LocalTime parseTimeOrDefault(String value, LocalTime fallback) {
+        if (value == null || value.isBlank()) return fallback;
+        try {
+            return LocalTime.parse(value.trim());
+        } catch (Exception e) {
+            return fallback;
+        }
     }
 }
